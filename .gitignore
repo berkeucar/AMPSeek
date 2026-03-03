@@ -5,3 +5,6 @@ work
 .singularity
 .conda
 visualization.yml
+.logs
+.slurm_output
+.test_output
