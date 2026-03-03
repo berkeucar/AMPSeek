@@ -82,7 +82,9 @@ process RUNCOLABFOLD{
     path "$output_path/foldings"
 
     script:
+    def jax_env = workflow.profile.contains('gpu') ? "" : "export JAX_PLATFORMS=cpu"
     """
+    $jax_env
     mkdir -p ./tmp_home
     mkdir -p ./colabfold_cache
     mkdir -p ./matplotlib_config

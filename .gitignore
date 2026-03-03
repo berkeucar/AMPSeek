@@ -6,5 +6,5 @@ work
 .conda
 visualization.yml
 .logs
-.slurm_output
-.test_output
+slurm_output
+test_output
