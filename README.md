@@ -59,16 +59,25 @@ Clone the repository and run with your preferred container profile.
 git clone https://github.com/bcgsc/AMPSeek.git
 cd AMPSeek
 ```
-Check if Singularity or Docker is installed properly:
+Check if Singularity or Docker is installed properly (for local runs):
 ```bash
 singularity --version
 docker --version
 ```
 
+### GPU Accelerator Dependencies:
+
+The AMPSeek pipeline automatically manages all software dependencies via containerization. Currently, AMPSeek supports NVIDIA GPU acceleration for tAMPer and LocalColabFold. Note that we provide single-GPU support only, per the current capabilities of these tools. Users must ensure that their host's NVIDIA driver is compatible with the CUDA versions bundled in the containers.
+
+| Software          | Version          | CUDA Version Bundled | 
+| ----------------- | ---------------- | ---------------------|
+| LocalColabFold    | 1.5.5            | 12.1.0               |
+| tAMPer            | 1.0.2            | N/A                  |
+
 ## Quick Start
 
 ### Linux: 
-To run the the pipeline (with default inputs) on Linux choose either Singularity or Docker:
+To run the the pipeline (with default inputs) locally on Linux using CPU(s), choose either Singularity or Docker profile:
 #### • Singularity:
 ```bash
 nextflow AMPSeek.nf -profile singularity
@@ -77,8 +86,15 @@ nextflow AMPSeek.nf -profile singularity
 ```bash
 nextflow AMPSeek.nf -profile docker
 ```
+
+To run the pipeline (with default inputs) on a compute cluster orchestrated with Slurm using CPU(s), add `slurm` to the execution profile (e.g., `-profile slurm,singularity`).
+
+To enable GPU acceleration, append the gpu profile to your run command. This can be combined with any container engine or executor profile (e.g., `-profile slurm,singularity,gpu`).
+
+**NOTE:** Local GPU and Slurm Docker options have not been tested for Linux. Please report any issues using GitHub Issues. 
+
 ### macOS:
-To run the the pipeline (with default inputs) on macOS:
+To run the the pipeline (with default inputs) locally on macOS using CPU(s):
 #### • Apple Silicon (ARM64)
 To run AMPSeek on ARM64, you need to Enable QEMU (once):
 ```bash
@@ -95,6 +111,7 @@ To run AMPSeek on AMD64:
 nextflow AMPSeek.nf -profile docker
 ```
 
+**NOTE:** GPU option has not been tested for MacOS. Please report any issues using GitHub Issues. 
 
 ## Input data
 
@@ -131,10 +148,12 @@ Default output directory: `output/`
 
 * **`foldings/`** — LocalColabFold results per peptide:
 
-  * ZIP per peptide (required by tAMPer), containing **five** PDBs, **3** prediction cycles, **Amber** relaxation
-* **`tamper_attention/`** — per‑peptide self‑attention maps (if enabled)
+  * ZIP per peptide (required by tAMPer), containing **five** PDBs, **three** prediction cycles, **Amber** relaxation
 
 Intermediate TSV/CSV products from AMPlify/tAMPer may be cleaned after report compilation.
+
+When utilizing a Slurm compute cluster, a log directory (default: .logs/) is automatically created to store the standard output and error files for each process. The files follow this naming convention:
+`<slurm_log_dir>/AMPSeek_<name of the process>_<slurm job id>.<out|err>`
 
 ## Usage
 
@@ -147,8 +166,11 @@ Common workflow parameters (set on `nextflow run AMPSeek.nf ...`):
 | `--output_path`   | path     |          `output/` | Output directory for results.                                                                             |
 | `--output_file`   | string   |     `results.html` | Name of the final HTML report.                                                                            |
 | `--threads`       | int      |               `30` | Max threads/CPUs to use.                                                                                  |
-| `--time`          | duration | *Nextflow default* | Per‑process timeout (e.g., `1h`, `30 min`).                                                               |
-| `--mem`           | memory   | `90%` of available | Per‑process memory limit (e.g., `8 GB`, `32 GB`).                                                         |
+| `--time`          | duration |               `4h` | Per‑process timeout (e.g., `1h`, `30 min`).                                                               |
+| `--mem`           | memory   |             `16.GB`| Per‑process memory limit (e.g., `8.GB`, `32.GB`).                                                         |
+| `--cpu_queue`     | partition|             *none* | Partition that will be used for CPU processes. **Required when `slurm` profile is used**.                   |
+| `--gpu_queue`     | partition|             *none* | Partition that will be used for GPU processes. **Required when `slurm,gpu` profile is used**.               |
+| `--slurm_log_dir` | path     |    `AMPSeek/logs/` | Directory that will be used to store Slurm logs. **Utilized only when `slurm` profile is used**.            |
 
 > Tool‑specific parameters are fixed to the configurations under which AMPlify and tAMPer were developed/tested. Advanced users may modify `AMPSeek.nf` directly if necessary.
 
@@ -158,7 +180,7 @@ Common workflow parameters (set on `nextflow run AMPSeek.nf ...`):
 | Step             | Image                                                 |     Size | Arch  |
 | ---------------- | ----------------------------------------------------- | -------: | ----- |
 | `RUNAMPLIFY`     | `quay.io/biocontainers/amplify:2.0.1--py36hdfd78af_0` | 748.683 MB | amd64 |
-| `RUNCOLABFOLD`   | `biohpc/localcolabfold:1.5`                           | 13.51 GB | amd64 |
+| `RUNCOLABFOLD`   | `itsberkeucar/localcolabfold:amd64`                   | 8.1 GB | amd64 |
 | `RUNTAMPER`      | `itsberkeucar/tamper:latest`                          |   4.2 GB | amd64 |
 | `COMPILERESULTS` | `itsberkeucar/ampseek-visualization:latest`           | 632.04 MB | amd64 |
 
@@ -175,7 +197,7 @@ Wall‑clock time and peak RAM on AMD64 with **30 threads**; container images pr
 | `AMPSeek_data_20.fasta`  |         3 |         20 |           121.35 |   7.0 GB   |             26:14:39   |
 | `AMPSeek_data_100.fasta` |        14 |        100 |           121.33 |       -    |            129:48:00   |
 
-> Total disk required for images on first run: \~**19 GB**.
+> Total disk required for images on first run: \~**14 GB**.
 
 
 ## Troubleshooting

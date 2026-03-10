@@ -6,5 +6,12 @@ work
 .conda
 visualization.yml
 .logs
+logs
 slurm_output
 test_output
+slurm.sh
+slurm_output_cpu
+.gitignore
+AMPSeek.nf
+nextflow.config
+README.md
