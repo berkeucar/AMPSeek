@@ -110,6 +110,7 @@ process RUNTAMPER {
 
     script:
     """
+    export MPLCONFIGDIR=\$PWD/matplotlib_config
     python /opt/tAMPer/src/predict_tAMPer.py -seqs $input_data -pdbs $structure_data -chkpnt /opt/tAMPer/checkpoints/trained/chkpnt.pt -out $output_path
     find $structure_data -type f ! -name '*.zip' -delete
     """
@@ -119,6 +120,8 @@ process COMPILERESULTS{
     tag "Compiling results"
     label "cpu_process"
 
+    publishDir "${params.output_path}", mode: 'copy'
+
     input:
     path amplify
     path tamper
@@ -127,19 +130,15 @@ process COMPILERESULTS{
     path imgs
     path templates
 
+    output:
+    path "*.html"
+
     script:
-    if(params.output_file)
-        """
-        python $compiler_path $amplify $tamper $colabfold $params.output_path/$params.output_file $imgs $templates
-        rm -f $params.output_path/AMPlify*.tsv
-        rm -f $params.output_path/*.csv
-        """
-    else
-        """
-        python $compiler_path $amplify $tamper $colabfold $params.output_path/results.html $imgs $templates
-        rm -f $params.output_path/AMPlify*.tsv
-        rm -f $params.output_path/*.csv
-        """
+    output_name = params.output_file ?: "results.html"
+    """
+    export MPLCONFIGDIR=\$(pwd)/matplotlib_config
+    python $compiler_path $amplify $tamper $colabfold $output_name $imgs $templates
+    """
 }
 
 workflow{
