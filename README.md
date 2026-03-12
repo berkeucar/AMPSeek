@@ -1,5 +1,5 @@
 
-![GitHub Release](https://img.shields.io/github/v/release/bcgsc/AMPSeek)
+![GitHub Release](https://img.shields.io/github/v/release/BirolLab/AMPSeek)
 ![Nextflow](https://img.shields.io/badge/workflow-Nextflow-23aa62.svg)
 ![Containers](https://img.shields.io/badge/containers-Docker%20%7C%20Singularity-blue.svg)
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS-red.svg)
@@ -56,7 +56,7 @@ conda activate ampseek
 Clone the repository and run with your preferred container profile.
 
 ```bash
-git clone https://github.com/bcgsc/AMPSeek.git
+git clone https://github.com/BirolLab/AMPSeek.git
 cd AMPSeek
 ```
 Check if Singularity or Docker is installed properly:
@@ -196,9 +196,9 @@ Wall‑clock time and peak RAM on AMD64 with **30 threads**; container images pr
 
 If you use AMPSeek, please cite:
 
-* **AMPlify** — Li *et al.* (2022) *BMC Genomics* 23:77. doi:10.1186/s12864-022-08310-4 [(GitHub)](https://github.com/bcgsc/AMPlify)
+* **AMPlify** — Li *et al.* (2022) *BMC Genomics* 23:77. doi:10.1186/s12864-022-08310-4 [(GitHub)](https://github.com/BirolLab/AMPlify)
 * **ColabFold/LocalColabFold** — Mirdita *et al.* (2022) *Nat Methods* 19. doi:10.1038/s41592-022-01488-1 [(GitHub)](https://github.com/sokrypton/ColabFold)
-* **tAMPer** —  Ebrahimikondori *et al.* (2024) *Protein Science*. doi:10.1002/pro.5076 [(GitHub)](https://github.com/bcgsc/tAMPer)
+* **tAMPer** —  Ebrahimikondori *et al.* (2024) *Protein Science*. doi:10.1002/pro.5076 [(GitHub)](https://github.com/BirolLab/tAMPer)
 * **Nextflow** — Di Tommaso *et al.* (2017) *Nat Biotechnol* 35:316–319. doi:10.1038/nbt.3820 [(GitHub)](https://github.com/nextflow-io/nextflow?tab=readme-ov-file)
 
 
