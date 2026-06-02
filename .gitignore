@@ -14,3 +14,4 @@ slurm_output_cpu
 slurm*.out
 slurm_gpu.sh
 
+src/__pycache__

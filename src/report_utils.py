@@ -9,6 +9,7 @@ import ast
 import seaborn as sns
 from matplotlib.ticker import FormatStrFormatter
 from matplotlib.lines import Line2D
+import zipfile 
 
 # ----------------------------------------------------------
 @dataclass
@@ -211,24 +212,37 @@ def plot_attention_heatmap_single(sequence_id,
     return {"png": b64_png, "svg": b64_svg}
 
 # ----------------------------------------------------------
-def load_pdb_map(summary_df: pd.DataFrame,
-                 pdb_dir: Path) -> dict:
+def load_pdb_map(summary_df: pd.DataFrame, pdb_dir: Path) -> dict:
     """
     Return {Sequence_ID: base64-encoded PDB text or None},
     searching for '*_relaxed_rank_001_*.pdb' inside
-    '{pdb_dir}/{Sequence_ID}.result/'.
+    '{pdb_dir}/{Sequence_ID}.result.zip'.
     """
     out = {}
+    pdb_dir = Path(pdb_dir)
+    
     for sid in summary_df["Sequence_ID"]:
-        if pdb_dir.exists():
-            print("Folder exists")
-            pdb_files = list(pdb_dir.glob(f"{sid}*_relaxed_rank_001_*.pdb"))
-            if pdb_files:
-                pdb_b64 = base64.b64encode(pdb_files[0].read_bytes()) \
-                                   .decode("ascii")
-                out[sid] = pdb_b64
-                continue
+        zip_path = pdb_dir / f"{sid}.result.zip"
+        
+        if zip_path.exists():
+            try:
+                with zipfile.ZipFile(zip_path, 'r') as zf:
+                    matching_files = [
+                        name for name in zf.namelist() 
+                        if name.endswith('.pdb') and '_relaxed_rank_001_' in name
+                    ]
+                    
+                    if matching_files:
+                        pdb_bytes = zf.read(matching_files[0])
+                        pdb_b64 = base64.b64encode(pdb_bytes).decode("ascii")
+                        out[sid] = pdb_b64
+                        continue
+                        
+            except zipfile.BadZipFile:
+                print(f"Warning: {zip_path.name} is corrupted or not a valid zip archive.")
+                
         out[sid] = None
+        
     return out
 
 # ----------------------------------------------------------

@@ -204,7 +204,7 @@ Wall‑clock time and peak RAM on AMD64 with **30 threads**; container images pr
 
 | Symptom                                                | Likely cause                                | Fix                                                                                       |
 | ------------------------------------------------------ | ------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| *Pipeline aborts with* `Error fetching image to cache` | Not enough space in Singularity cache       | Set a larger cache via `NFX_SINGULARITY_CACHEDIR` (export before running).                |
+| Pipeline aborts with `Error fetching image to cache` | Not enough space in Singularity cache       | Set a larger cache via `NFX_SINGULARITY_CACHEDIR` (export before running).                |
 | Visualization step fails; multiple TSV files present   | Previous run was interrupted before cleanup | Remove intermediate TSVs in the output directory and re‑run.                              |
 | Running Docker on ARM64 fails                          | AMD64 images require emulation              | Install QEMU with `docker run --privileged --rm tonistiigi/binfmt --install amd64`.       |
 | Unexpected peptides in results                         | Multiple FASTAs present in input directory  | Keep only the intended FASTA in `AMPSeek/data/`, or use `--data_path` to a specific file. |

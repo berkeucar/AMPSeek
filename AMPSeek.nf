@@ -3,54 +3,93 @@ nextflow.enable.dsl = 2
 
 process DOWNLOADSEQUENCES {
     tag "Preparing for execution / Downloading requested data"
-    publishDir "$params.output_path", mode: 'copy'
     label "cpu_process"
+    def data_path = file(params.data_path)
+    def is_file_target = data_path.exists() ? data_path.isFile() : params.data_path.matches('.*\\.(fasta|fa|fna)$')
 
     output:
-    path "*.{fasta,fa,fna}", emit: input_file
+    path( is_file_target ? "${data_path.name}" : "*.{fasta,fa,fna}" )
 
     script:
-    if (params.download_from)
+    if (params.download_from) {
+        if (is_file_target)
         """
         # --- Backup Logic ---
-        if [ -d "$params.data_path" ]; then
-            checksum=\$(find "$params.data_path" -type f -exec md5sum {} + | md5sum | cut -d ' ' -f1)
+        target_file="${params.data_path}"
+
+        if [ -f "\$target_file" ]; then
+            checksum=\$(md5sum "\$target_file" | cut -d ' ' -f1)
+            base_path="\${target_file%.*}"
+            ext="\${target_file##*.}"
+            
+            if [ "\$target_file" == "\$ext" ] || [ "\$base_path" == "\$target_file" ]; then
+                backup_file="\${target_file}_backup_\${checksum}"
+            else
+                backup_file="\${base_path}_backup_\${checksum}.\${ext}"
+            fi
+            
+            if [ -f "\$backup_file" ]; then
+                echo "Backup already exists (\$backup_file), skipping new backup."
+            else
+                echo "Backing up existing data to: \$backup_file"
+                mv "\$target_file" "\$backup_file"
+            fi
+        fi
+
+        wget -O "\$target_file" "${params.download_from}"
+        ln -s "\$target_file" ./
+        """
+        else 
+        """
+        # --- Backup Logic ---
+        if [ -d "${params.data_path}" ]; then
+            checksum=\$(find "${params.data_path}" -type f -exec md5sum {} + | md5sum | cut -d ' ' -f1)
             backup_dir="${params.data_path}_backup_\${checksum}"
             if [ -d "\$backup_dir" ]; then
                 echo "Backup already exists (\$backup_dir), skipping new backup."
             else
                 echo "Backing up existing data to: \$backup_dir"
-                mv "$params.data_path" "\$backup_dir"
+                mv "${params.data_path}" "\$backup_dir"
             fi
         fi
 
-        mkdir -p "$params.data_path"
-        
-        # --- Download Logic ---
-        wget -O "downloaded_input.fa" "$params.download_from"
-        
-        # Copy to the external data path for storage
-        cp "downloaded_input.fa" "$params.data_path/"
+        mkdir -p "${params.data_path}"
+        wget -O "${params.data_path}/downloaded_input.fa" "${params.download_from}"
+        ln -s "${params.data_path}/downloaded_input.fa" ./ 
         """
-    else
+    }
+    else {
+        if (is_file_target)
         """
-        find "$params.data_path" -maxdepth 1 -type f -name "*.fasta" -exec ln -s {} ./ \\;
-        find "$params.data_path" -maxdepth 1 -type f -name "*.fa" -exec ln -s {} ./ \\;
-        find "$params.data_path" -maxdepth 1 -type f -name "*.fna" -exec ln -s {} ./ \\;
+        target_file="${params.data_path}"
+        
+        if [ -f "\$target_file" ]; then
+            echo "Successfully found exactly one sequence file named ${params.data_path}"
+            ln -s "\$target_file" ./
+        else 
+            echo "Error: There is no file named ${params.data_path}"
+            exit 1
+        fi 
+        """
+        else
+        """
+        find "${params.data_path}" -maxdepth 1 -type f -name "*.fasta" -exec ln -s {} ./ \\;
+        find "${params.data_path}" -maxdepth 1 -type f -name "*.fa" -exec ln -s {} ./ \\;
+        find "${params.data_path}" -maxdepth 1 -type f -name "*.fna" -exec ln -s {} ./ \\;
 
-        # Count how many valid files we just linked into the working directory
         file_count=\$(ls *.fasta *.fa *.fna 2>/dev/null | wc -l)
 
         if [ "\$file_count" -eq 1 ]; then
-            echo "Successfully found and linked exactly one sequence file from $params.data_path"
+            echo "Successfully found and linked exactly one sequence file from ${params.data_path}"
         elif [ "\$file_count" -gt 1 ]; then
-            echo "Error: Found multiple sequence files (\${file_count}) in $params.data_path! Please ensure only one is present."
+            echo "Error: Found multiple sequence files (\${file_count}) in ${params.data_path}! Please ensure only one is present."
             exit 1
         else
-            echo "Error: No download URL provided, and no existing fasta file found in $params.data_path!"
+            echo "Error: No download URL provided, and no existing fasta file found in ${params.data_path}!"
             exit 1
         fi
         """
+    }
 }
 
 process RUNAMPLIFY {
@@ -59,27 +98,26 @@ process RUNAMPLIFY {
     
     input:
     path data_path
-    path output_path
 
     output:
-    path "$output_path/*.tsv"
+    path "*.tsv"
 
     script:
     """
-    AMPlify -m balanced -s $data_path -od $output_path -sub on -att on
+    AMPlify -m balanced -s $data_path -sub on -att on
     """
 }
 
 process RUNCOLABFOLD{
     tag "Running colabfold"
     label workflow.profile.contains('gpu') ? "gpu_process" : "cpu_process" 
-    
+    publishDir "${params.output_path}", mode: 'copy'
+
     input:
     path data_path
-    path output_path
 
     output:
-    path "$output_path/foldings"
+    path "foldings"
 
     script:
     def jax_env = workflow.profile.contains('gpu') ? "" : "export JAX_PLATFORMS=cpu"
@@ -92,7 +130,10 @@ process RUNCOLABFOLD{
     export COLABFOLD_CACHE_DIR=\$PWD/colabfold_cache
     export MPLCONFIGDIR=\$PWD/matplotlib_config
 
-    colabfold_batch --amber --zip $data_path $output_path/foldings
+    colabfold_batch --amber --zip $data_path foldings
+    cd foldings
+    find . -maxdepth 1 -type f ! -name '*.zip' -delete
+    rm -rf */
     """
 }
 
@@ -103,16 +144,14 @@ process RUNTAMPER {
     input:
     path input_data
     path structure_data
-    path output_path
 
     output:
-    path "$output_path/results.csv"
+    path "results.csv"
 
     script:
     """
     export MPLCONFIGDIR=\$PWD/matplotlib_config
-    python /opt/tAMPer/src/predict_tAMPer.py -seqs $input_data -pdbs $structure_data -chkpnt /opt/tAMPer/checkpoints/trained/chkpnt.pt -out $output_path
-    find $structure_data -type f ! -name '*.zip' -delete
+    python /opt/tAMPer/src/predict_tAMPer.py -seqs $input_data -pdbs $structure_data -chkpnt /opt/tAMPer/checkpoints/trained/chkpnt.pt -out .
     """
 }
 
@@ -141,18 +180,24 @@ process COMPILERESULTS{
     """
 }
 
-workflow{
-    prep_out = DOWNLOADSEQUENCES()
+// create the input and output directory if necessary before the pipeline starts
+def myDir = file(params.output_path)
+if (!myDir.exists()) {
+    myDir.mkdirs()
+    println "Created output directory: ${myDir.name}"
+}
 
-    input_data_ch = prep_out.input_file
+
+workflow{
+    input_data_ch = DOWNLOADSEQUENCES()
     output_data_ch = Channel.fromPath("$params.output_path")
     compiler_path = Channel.fromPath("$projectDir/src/make_report.py")
     template_path = Channel.fromPath("$projectDir/templates/report_template.html")
     img_path = Channel.fromPath("$projectDir/imgs/Logo.png")
     
-    output_amplify = RUNAMPLIFY(input_data_ch, output_data_ch)
-    output_colabfold = RUNCOLABFOLD(input_data_ch, output_data_ch)
-    output_tamper = RUNTAMPER(input_data_ch, output_colabfold, output_data_ch)
+    output_amplify = RUNAMPLIFY(input_data_ch)
+    output_colabfold = RUNCOLABFOLD(input_data_ch)
+    output_tamper = RUNTAMPER(input_data_ch, output_colabfold)
     COMPILERESULTS(output_amplify, output_tamper, output_colabfold, compiler_path, img_path, template_path)
 }
 
