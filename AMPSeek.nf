@@ -180,13 +180,18 @@ process COMPILERESULTS{
     """
 }
 
-// create the input and output directory if necessary before the pipeline starts
+// create the output directory if necessary before the pipeline starts
 def myDir = file(params.output_path)
 if (!myDir.exists()) {
     myDir.mkdirs()
     println "Created output directory: ${myDir.name}"
 }
 
+// create the log directory if running on slurm
+if (workflow.profile.contains('slurm') && !file(params.slurm_log_dir).exists()){
+    file(params.slurm_log_dir).mkdirs()
+    println "Created SLURM log directory: ${params.slurm_log_dir}"
+}
 
 workflow{
     input_data_ch = DOWNLOADSEQUENCES()
