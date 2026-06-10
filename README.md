@@ -218,6 +218,7 @@ Wall‑clock time and peak RAM on AMD64 with **30 threads**; container images pr
 
 If you use AMPSeek, please cite:
 
+* **AMPSeek** – Zhang *et al.* (2026) *Current Protocols* 6, e70325. doi:10.1002/cpz1.70325
 * **AMPlify** — Li *et al.* (2022) *BMC Genomics* 23:77. doi:10.1186/s12864-022-08310-4 [(GitHub)](https://github.com/bcgsc/AMPlify)
 * **ColabFold/LocalColabFold** — Mirdita *et al.* (2022) *Nat Methods* 19. doi:10.1038/s41592-022-01488-1 [(GitHub)](https://github.com/sokrypton/ColabFold)
 * **tAMPer** —  Ebrahimikondori *et al.* (2024) *Protein Science*. doi:10.1002/pro.5076 [(GitHub)](https://github.com/bcgsc/tAMPer)
